@@ -22,8 +22,12 @@ class ConceptDriftsFinder:
         """
 
         concept_drift_results = []
+
+        # TODO: Actually choose cutoff_values
+        cutoff_values = [1,2,3,4,5]
+
         # Run over cutoff values
-        for concept_cutoff in [3]:
+        for concept_cutoff in cutoff_values:
             # Split dataset
             part_one, part_two = self._split_dataset(transactions, concept_column, concept_cutoff=concept_cutoff)
 
@@ -32,7 +36,8 @@ class ConceptDriftsFinder:
             rules_two = self._calc_rules(part_two, target_column)
 
             # Compare rules and find concept drifts
-            concept_drift_results.extend(self._compare_rules(rules_one, rules_two, min_confidence, min_support, concept_cutoff))
+            concept_drift_results.extend(self._compare_rules(rules_one, rules_two, min_confidence, min_support,
+                                                             concept_cutoff, concept_column, diff_threshold))
         return concept_drift_results
 
     def _split_dataset(self, transactions: List[Transaction], concept_column: str, concept_cutoff: Any) -> Tuple[list, list]:
@@ -73,7 +78,8 @@ class ConceptDriftsFinder:
         return [[(item_key, item_value) for item_key, item_value in transaction.items.items()] for transaction in transactions]
 
     def _compare_rules(self, rules_one: List[AssociationRule], rules_two: List[AssociationRule],
-                       min_confidence: float, min_support: float, concept_cutoff: float) -> List[ConceptDriftResult]:
+                       min_confidence: float, min_support: float, concept_cutoff: float,
+                       concept_column: str, diff_threshold: float) -> List[ConceptDriftResult]:
         # Create a unique list of all pairs of rules by iterating over the two lists
         rules_pairs = []
         for rule_one in rules_one:
@@ -94,8 +100,14 @@ class ConceptDriftsFinder:
             if any_rule_valid:
                 confidence_before = rules[0].confidence if rules[0] else None
                 confidence_after = rules[1].confidence if rules[1] else None
+                support_before = rules[0].support if rules[0] else None
+                support_after = rules[1].support if rules[1] else None
+
                 # Remove rules that have the same confidence as they are not interesting
-                if confidence_before != confidence_after:
+                are_rules_different = confidence_before != confidence_after
+                # Remove pairs that don't pass the diff threshold
+                is_diff_threshold_valid = diff_threshold is None or (confidence_before and confidence_after and abs(confidence_before - confidence_after) > diff_threshold)
+                if are_rules_different and is_diff_threshold_valid:
                     # Save any of the two rules that is not None
                     non_none_rule = [rule for rule in rules if rule is not None][0]
                     concept_drifts.append(ConceptDriftResult(
@@ -103,7 +115,10 @@ class ConceptDriftsFinder:
                         non_none_rule.right_hand_side,
                         confidence_before,
                         confidence_after,
-                        concept_cutoff
+                        support_before,
+                        support_after,
+                        concept_cutoff,
+                        concept_column
                     ))
 
         return concept_drifts

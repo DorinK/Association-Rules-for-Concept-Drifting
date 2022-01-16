@@ -33,7 +33,10 @@ class ConceptDriftResult:
     right_hand_side: Dict[str, Any]
     confidence_before: float
     confidence_after: float
+    support_before: float
+    support_after: float
     concept_cutoff: Any
+    concept_column: Any
 
     def confidence_diff(self):
         if self.confidence_before and self.confidence_after:

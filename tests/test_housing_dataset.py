@@ -38,7 +38,7 @@ def test_housing_dataset():
     for c in very_numerical:
         try:
             # df[c] = pd.qcut(dtf[c], 5, labels=["very low", "low", "medium", "high", "very high"])
-            df[c] = pd.qcut(dtf[c], 5, labels=[1, 2, 3, 4 ,5])
+            df[c] = pd.qcut(dtf[c], 5, labels=[1, 2, 3, 4, 5])
         except:
             # sometimes for highly skewed data, we cannot perform qcut as most quantiles are equal
             # df[c] = pd.cut(dtf[c], 5, labels=["very low", "low", "medium", "high", "very high"])
@@ -55,8 +55,13 @@ def test_housing_dataset():
         transactions.append(Transaction({k: v for k, v in r.items()}))
 
     # Run the ConceptDriftsFinder
-    concepts: List[ConceptDriftResult] = ConceptDriftsFinder().find_concept_drifts(transactions, "YearBuilt", "SalePrice", min_confidence=0.5, min_support=0.1)
+    concepts: List[ConceptDriftResult] = ConceptDriftsFinder().find_concept_drifts(transactions, "YearBuilt",
+                                                                                   "SalePrice", min_confidence=0.4,
+                                                                                   min_support=0.4, diff_threshold=0.1)
 
+    # Convert to dataframe
     concepts_df = pd.DataFrame([x.to_dict() for x in concepts])
 
-    print("done")
+    # Print dataframe
+    pd.set_option("display.max_columns", 20)
+    print(concepts_df.head())
