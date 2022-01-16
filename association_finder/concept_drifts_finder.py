@@ -2,7 +2,7 @@ from typing import Tuple, Any, List
 
 from efficient_apriori import apriori
 
-from association_finder.models import ConceptDriftResult, AssociationRule, SEPARATOR
+from association_finder.models import ConceptDriftResult, AssociationRule, Transaction
 
 
 class ConceptDriftsFinder:
@@ -10,7 +10,7 @@ class ConceptDriftsFinder:
     This class encapsulates the concepts drift finding logic
     """
 
-    def find_concept_drifts(self, dataset: List[dict], concept_column: str, target_column: str,
+    def find_concept_drifts(self, transactions: List[Transaction], concept_column: str, target_column: str,
                             min_confidence: float = 1.0, min_support: float = 0.5,
                             diff_threshold: float = 0.5) -> List[ConceptDriftResult]:
         """
@@ -23,9 +23,9 @@ class ConceptDriftsFinder:
 
         concept_drift_results = []
         # Run over cutoff values
-        for concept_cutoff in [2018]:
+        for concept_cutoff in [3]:
             # Split dataset
-            part_one, part_two = self._split_dataset(dataset, concept_column, concept_cutoff=concept_cutoff)
+            part_one, part_two = self._split_dataset(transactions, concept_column, concept_cutoff=concept_cutoff)
 
             # Calc rules for each split
             rules_one = self._calc_rules(part_one, target_column)
@@ -35,26 +35,29 @@ class ConceptDriftsFinder:
             concept_drift_results.extend(self._compare_rules(rules_one, rules_two, min_confidence, min_support, concept_cutoff))
         return concept_drift_results
 
-    def _split_dataset(self, dataset: List[dict], concept_column: str, concept_cutoff: Any) -> Tuple[list, list]:
+    def _split_dataset(self, transactions: List[Transaction], concept_column: str, concept_cutoff: Any) -> Tuple[list, list]:
         """
         Split the dataset into two based on a given cutoff
         """
 
-        return [x for x in dataset if x[concept_column] < concept_cutoff], [x for x in dataset if x[concept_column] >= concept_cutoff]
+        transactions_one = [transaction for transaction in transactions if transaction.items[concept_column] < concept_cutoff]
+        transactions_two = [transaction for transaction in transactions if transaction.items[concept_column] >= concept_cutoff]
 
-    def _calc_rules(self, dataset: List[dict], target_column: str) -> List[AssociationRule]:
+        return transactions_one, transactions_two
+
+    def _calc_rules(self, transactions: List[Transaction], target_column: str) -> List[AssociationRule]:
         """
         Run the apriori algorithm for the subset of the dataset
         """
 
         # Prepare the data for the apriori algorithm
-        dataset_as_transactions: List[List[str]] = self._convert_dataset_to_transactions(dataset)
+        apriori_input: List[List[Tuple[str, str]]] = self._convert_transactions_to_apriori_input(transactions)
 
         # Note: the reason we use `min_confidence=0.1` and `min_support=0.1` is that we need all rules for comparison.
         # The confidence / support filters will run afterwards
-        itemsets, rules = apriori(dataset_as_transactions, min_confidence=0.1, min_support=0.1)
+        itemsets, rules = apriori(apriori_input, min_confidence=0.1, min_support=0.1)
 
-        # Convert rules to
+        # Convert rules to our own objects (used to easily filter for target_column)
         rules_parsed = [AssociationRule.create(rule) for rule in rules]
 
         # Keep only rules that have only the <target_column> in their right hand size
@@ -62,13 +65,12 @@ class ConceptDriftsFinder:
 
         return target_rules
 
-    def _convert_dataset_to_transactions(self, dataset: List[dict]) -> List[List[str]]:
+    def _convert_transactions_to_apriori_input(self, transactions: List[Transaction]) -> List[List[Tuple[str, str]]]:
         """
-        The input for the apriori algorithm is a list of transactions (e.g., [('eggs', 'milk'), ('eggs', ...), ...],
-        wo we need to convert the list of dictionaries to transactions (list of strings)
+        The input for the apriori algorithm is a list of transactions (e.g., [('eggs', 'milk'), ('eggs', ...), ...]
         """
 
-        return [[f"{k}{SEPARATOR}{v}" for k,v in item_dict.items()] for item_dict in dataset]
+        return [[(item_key, item_value) for item_key, item_value in transaction.items.items()] for transaction in transactions]
 
     def _compare_rules(self, rules_one: List[AssociationRule], rules_two: List[AssociationRule],
                        min_confidence: float, min_support: float, concept_cutoff: float) -> List[ConceptDriftResult]:
@@ -97,7 +99,8 @@ class ConceptDriftsFinder:
                     # Save any of the two rules that is not None
                     non_none_rule = [rule for rule in rules if rule is not None][0]
                     concept_drifts.append(ConceptDriftResult(
-                        non_none_rule,
+                        non_none_rule.left_hand_side,
+                        non_none_rule.right_hand_side,
                         confidence_before,
                         confidence_after,
                         concept_cutoff

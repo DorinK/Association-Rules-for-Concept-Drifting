@@ -6,7 +6,7 @@ import pytest
 from dataclasses_json import dataclass_json
 
 from association_finder.concept_drifts_finder import ConceptDriftsFinder, find_equivalent_rule
-from association_finder.models import ConceptDriftResult, AssociationRule
+from association_finder.models import ConceptDriftResult, AssociationRule, Transaction
 
 
 class SalesPrice(Enum):
@@ -21,7 +21,7 @@ class SalesPrice(Enum):
 
 @dataclass_json
 @dataclass
-class MockHousingObject:
+class MockHousingSale:
     """
     A housing dataset object used for tests
     """
@@ -34,7 +34,7 @@ class MockHousingObject:
 
 
 @pytest.fixture
-def sales_data_fixture__ac_influences_price_over_time() -> List[dict]:
+def sales_data_fixture__ac_influences_price_over_time() -> List[Transaction]:
     """
     This mock dataframe simulates a case where prices went up following AC demand
     """
@@ -42,15 +42,15 @@ def sales_data_fixture__ac_influences_price_over_time() -> List[dict]:
     sales = []
 
     # In 2015, AC didn't influence price
-    sales.append(MockHousingObject(sales_price=1, sales_year=2015, construction_year=1990, has_ac=False, num_rooms=3))
-    sales.append(MockHousingObject(sales_price=1, sales_year=2015, construction_year=2010, has_ac=True, num_rooms=3))
+    sales.append(MockHousingSale(sales_price=1, sales_year=2015, construction_year=1990, has_ac=False, num_rooms=3))
+    sales.append(MockHousingSale(sales_price=1, sales_year=2015, construction_year=2010, has_ac=True, num_rooms=3))
 
     # In 2020, AC did influence price (same house is more expensive)
-    sales.append(MockHousingObject(sales_price=1, sales_year=2020, construction_year=1990, has_ac=False, num_rooms=3))
-    sales.append(MockHousingObject(sales_price=2, sales_year=2020, construction_year=2010, has_ac=True, num_rooms=3))
+    sales.append(MockHousingSale(sales_price=1, sales_year=2020, construction_year=1990, has_ac=False, num_rooms=3))
+    sales.append(MockHousingSale(sales_price=2, sales_year=2020, construction_year=2010, has_ac=True, num_rooms=3))
 
-    # Convert to dictionaries (this is the input to ConceptDriftsFinder)
-    return [x.to_dict() for x in sales]
+    # Convert to transactions objects (this is the input to ConceptDriftsFinder)
+    return [Transaction(transaction.to_dict()) for transaction in sales]
 
 
 class TestAssociationFinder:
@@ -64,7 +64,7 @@ class TestAssociationFinder:
             sales_data_fixture__ac_influences_price_over_time, concept_column="sales_year", target_column="sales_price")
 
         # We expect to find the rule (has_ac) -> (sales_price: 2)
-        concept = find_equivalent_concept(AssociationRule({"has_ac": 'True'}, {"sales_price": '2'}, None, None, None, None), concept_drift_results)
+        concept = find_equivalent_concept(AssociationRule({"has_ac": True}, {"sales_price": 2}, None, None, None, None), concept_drift_results)
         assert concept is not None
         assert concept.confidence_before is None
         assert concept.confidence_after == 1.0
