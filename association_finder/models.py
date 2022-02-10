@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, List, Dict, Tuple
 
 import efficient_apriori
@@ -43,3 +44,15 @@ class ConceptDriftResult:
             return abs(self.confidence_before - self.confidence_after)
         else:
             return None
+
+
+class CutoffValuesType(Enum):
+    """
+    Numeric means that in a column with values [2010, 2020], we might choose 2015.
+    Discrete means that in a column with values ["2010", "2020"], we will choose "2010", "2020".
+    This influences how we cut the data given this cutoff value.
+    """
+
+    Continuous = 0
+    Discrete = 1
+
