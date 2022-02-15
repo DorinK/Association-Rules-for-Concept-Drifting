@@ -10,7 +10,7 @@ class CutoffValuesFinder:
 
     @staticmethod
     def choose_cutoff_values(transactions: List[Transaction],
-                              concept_column: str) -> Tuple[List[Any], CutoffValuesType]:
+                             concept_column: str) -> Tuple[List[Any], CutoffValuesType]:
         # Find all unique values for target columns
         unique_target_values = list(set(
             [transaction.items[concept_column] for transaction in transactions if concept_column in transaction.items]))
