@@ -1,3 +1,4 @@
+import logging
 from typing import Tuple, Any, List
 
 from efficient_apriori import apriori
@@ -13,7 +14,8 @@ class ConceptDriftsFinder:
 
     def find_concept_drifts(self, transactions: List[Transaction], concept_column: str, target_column: str,
                             min_confidence: float = 1.0, min_support: float = 0.5,
-                            diff_threshold: float = 0.5) -> List[ConceptDriftResult]:
+                            diff_threshold: float = 0.5,
+                            verbose: bool = False) -> List[ConceptDriftResult]:
         """
         Given a dataset of transactions:
         1. find different <concept_column> cutoffs
@@ -26,6 +28,9 @@ class ConceptDriftsFinder:
 
         # Choose cutoff values
         cutoff_values, cutoff_values_type = CutoffValuesFinder.choose_cutoff_values(transactions, concept_column)
+
+        if verbose:
+            logging.info(f"Found cutoff_values_type: {cutoff_values_type} ; len(cutoff_values) {len(cutoff_values)}")
 
         # Run over cutoff values
         for concept_cutoff in cutoff_values:
