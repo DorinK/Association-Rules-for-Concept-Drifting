@@ -139,7 +139,8 @@ class ConceptEngineering:
         Decides how much to increase confident rules
         """
 
-        return 1.2
+        # return 1.2
+        return abs(concept_row['lift_before'] - concept_row['lift_after'])
         # TODO: Try concept_row confidence diff
 
     def _from_lhs_to_queries(self, lhs: dict) -> List[str]:
@@ -176,7 +177,7 @@ class ConceptEngineering:
         is_categorical_column = str(X[concept_column].dtype) == "category"
 
         # Increase those that are lower than the concept
-        if concept_row['confidence_before'] >= concept_row['confidence_after']:
+        if concept_row['lift_before'] >= concept_row['lift_after']:
             # Example: If we got 4.2 in the qcut, we need to change it to 5
             if is_categorical_column:
                 concept_cutoff = ceil(concept_cutoff)

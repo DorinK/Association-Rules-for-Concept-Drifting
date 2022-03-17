@@ -123,11 +123,12 @@ class ConceptDriftsFinder:
             any_rule_valid = any(rule for rule in rules if is_rule_valid(rule, min_confidence, min_support))
 
             if any_rule_valid:
-                # TODO: Consider using lift instead of support
                 confidence_before = rules[0].confidence if rules[0] else None
                 confidence_after = rules[1].confidence if rules[1] else None
                 support_before = rules[0].support if rules[0] else None
                 support_after = rules[1].support if rules[1] else None
+                lift_before = rules[0].lift if rules[0] else None
+                lift_after = rules[1].lift if rules[1] else None
 
                 # Remove rules that have the same confidence as they are not interesting
                 are_rules_different = confidence_before != confidence_after
@@ -144,6 +145,8 @@ class ConceptDriftsFinder:
                         confidence_after,
                         support_before,
                         support_after,
+                        lift_before,
+                        lift_after,
                         concept_cutoff,
                         concept_column
                     ))

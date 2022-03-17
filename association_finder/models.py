@@ -36,6 +36,8 @@ class ConceptDriftResult:
     confidence_after: float
     support_before: float
     support_after: float
+    lift_before: float
+    lift_after: float
     concept_cutoff: Any
     concept_column: Any
 
