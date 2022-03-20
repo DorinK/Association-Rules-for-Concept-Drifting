@@ -33,9 +33,9 @@ class TestConceptEngineering:
 
         with mock.patch.object(ConceptDriftsFinder, "find_concept_drifts") as find_concept_drifts_mock:
             find_concept_drifts_mock.return_value = [
-                ConceptDriftResult({"Humidity9am": 3}, {"RainTomorrow": 1}, 0.4, 0.6, 0.4, 0.6, 0.0, "RainToday")
+                ConceptDriftResult({"Humidity9am": 3}, {"RainTomorrow": 1}, 0.4, 0.6, 0.4, 0.6, 0.0, 1.0, 0.0, "RainToday")
             ]
             new_X = concept_engineering.fit_transform(X, df, target_column, [])
 
         # We expect the new value to be 12 (twice multiplied by 2)
-        assert new_X.iloc[0]['Humidity9am'] == 12
+        assert new_X.iloc[0]['Humidity9am'] == 3.6

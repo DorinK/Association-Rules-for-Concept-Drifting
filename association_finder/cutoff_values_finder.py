@@ -28,7 +28,7 @@ class CutoffValuesFinder:
     def _choose_cutoff_value_type(unique_target_values: List[Any]) -> CutoffValuesType:
         # If not all values are numeric, return discrete
         is_numeric = lambda x: isinstance(x, int) or isinstance(x, float)
-        all_values_are_numeric = all(value for value in unique_target_values if is_numeric(value))
+        all_values_are_numeric = all(is_numeric(value) for value in unique_target_values)
         if not all_values_are_numeric:
             return CutoffValuesType.Discrete
 

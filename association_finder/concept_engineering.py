@@ -50,7 +50,7 @@ class ConceptEngineering:
         """
 
         X_rules = X.copy()
-        self._modify_X(X_rules)
+        X_rules = self._modify_X(X_rules)
         return X_rules
 
     def fit_transform(self, X: pd.DataFrame, df: pd.DataFrame, target_column: str, one_hot_columns: List[str]):
@@ -100,7 +100,7 @@ class ConceptEngineering:
 
             if self.verbose:
                 time_took = end_time - start_time
-                logging.info(f"Finished concept column ; time_took '{time_took}'")
+                logging.info(f"Finished concept column ; time_took (in seconds): {time_took}")
 
         concepts_df = pd.DataFrame([x.to_dict() for x in all_concepts])
         self.concepts_df = concepts_df
@@ -129,6 +129,9 @@ class ConceptEngineering:
 
             rows_to_update.append((filtered_X.index, lhs_columns, concept_row))
 
+        # Convert categorical columns to float (otherwise we can't multiply their value)
+        X = X.astype('float')
+
         for indices, columns, concept_row in rows_to_update:
             try:
                 X.loc[indices, columns] = X.loc[indices, columns] * self._get_weight(concept_row)
@@ -147,9 +150,8 @@ class ConceptEngineering:
         Decides how much to increase confident rules
         """
 
-        # return 1.2
-        return abs(concept_row['lift_before'] - concept_row['lift_after'])
-        # TODO: Try concept_row confidence diff
+        return 1.2
+        # return (abs(concept_row['lift_before'] - concept_row['lift_after']))
 
     def _from_lhs_to_queries(self, lhs: dict) -> List[str]:
         """
@@ -160,9 +162,9 @@ class ConceptEngineering:
         for column_name, column_value in lhs.items():
             if column_name not in self.one_hot_columns:
                 # TODO: Consider to use for continuous values < > instead of exact match
-                queries.append(f"{column_name} == {column_value}")
+                queries.append(f"`{column_name}` == {column_value}")
             else:
-                queries.append(f"{column_name}_{column_value} == 1")
+                queries.append(f"`{column_name}_{column_value}` == 1")
         return queries
 
     def _filter_X_by_lhs(self, X: pd.DataFrame, concept_row) -> pd.DataFrame:
@@ -182,6 +184,12 @@ class ConceptEngineering:
 
         concept_column = concept_row['concept_column']
         concept_cutoff = concept_row['concept_cutoff']
+
+        if concept_column in self.one_hot_columns:
+            # When working with one hot columns, the value is part of the column name and the value is either 1 or 0
+            concept_column = f"{concept_column}_{concept_cutoff}"
+            concept_cutoff = 1
+
         is_categorical_column = str(X[concept_column].dtype) == "category"
 
         # Increase those that are lower than the concept
@@ -190,14 +198,14 @@ class ConceptEngineering:
             if is_categorical_column:
                 concept_cutoff = ceil(concept_cutoff)
 
-            concept_query = f"{concept_column} < {concept_cutoff}"
+            concept_query = f"`{concept_column}` < {concept_cutoff}"
         # Increase those that are bigger than the concept
         else:
             # Example: If we got 4.2 in the qcut, we need to change it to 4
             if is_categorical_column:
                 concept_cutoff = floor(concept_cutoff)
 
-            concept_query = f"{concept_column} >= {concept_cutoff}"
+            concept_query = f"`{concept_column}` >= {concept_cutoff}"
 
         return concept_query
 

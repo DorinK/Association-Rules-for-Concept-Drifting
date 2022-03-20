@@ -35,33 +35,9 @@ def preprocess_dataset(df, train_params: Optional[TrainParams] = None):
         categorical_columns = train_params.categorical_columns
         too_many_categories_columns = train_params.too_many_categories_columns
         ordinals = train_params.ordinals
-        dropped_columns = train_params.dropped_columns
 
-    # Filling Null Values with the column's mean
-    na_columns = df[very_numerical].isna().sum()
-    na_columns = na_columns[na_columns > 0]
-    na_columns_mean = {}
-
-    for nc in na_columns.index:
-        if train_params is None:
-            column_mean = df[nc].mean()
-
-            # Save mean
-            na_columns_mean[nc] = column_mean
-        else:
-            column_mean = train_params.na_columns_mean[nc]
-
-        df[nc].fillna(column_mean, inplace=True)
-
-    # Dropping and filling NA values for categorical columns:
-    if train_params is None:
-        # drop if at least 70% are NA:
-        nul_cols = df[categorical_columns].isna().sum() / len(df)
-        drop_us = nul_cols[nul_cols > 0.7]
-        df = df.drop(drop_us.index, axis=1)
-        dropped_columns = [d for d in drop_us.keys()]
-    else:
-        df = df.drop(columns=dropped_columns)
+    df, na_columns_mean = _fill_numerical_na_with_column_mean(df, very_numerical, train_params)
+    df, dropped_columns = _handle_categorical_na(df, categorical_columns, train_params)
 
     # Drop columns that have too many categories
     if train_params is None:
@@ -105,6 +81,52 @@ def preprocess_dataset(df, train_params: Optional[TrainParams] = None):
     return df, TrainParams(na_columns_mean, numerical_columns_cut, dropped_columns,
                            numeric_columns, very_numerical, categorical_columns,
                            too_many_categories_columns, ordinals)
+
+
+def _fill_numerical_na_with_column_mean(df: pd.DataFrame, very_numerical: List[str], train_params: TrainParams) -> Tuple[
+    pd.DataFrame, dict]:
+    """
+    Filling Null Values with the column's mean
+    """
+
+    na_columns = df[very_numerical].isna().sum()
+    na_columns = na_columns[na_columns > 0]
+    na_columns_mean = {}
+
+    for nc in na_columns.index:
+        if train_params is None:
+            column_mean = df[nc].mean()
+
+            # Save mean for later use in validation
+            na_columns_mean[nc] = column_mean
+        else:
+            column_mean = train_params.na_columns_mean[nc]
+
+        df[nc].fillna(column_mean, inplace=True)
+
+    return df, na_columns_mean
+
+
+def _handle_categorical_na(df, categorical_columns: List[str], train_params: TrainParams) -> Tuple[pd.DataFrame, list]:
+    """
+    Dropping and filling NA values for categorical columns:
+    """
+
+    if train_params is None:
+        # drop if at least 70% are NA:
+        nul_cols = df[categorical_columns].isna().sum() / len(df)
+        drop_us = nul_cols[nul_cols > 0.7]
+        df = df.drop(drop_us.index, axis=1)
+        dropped_columns = [d for d in drop_us.keys()]
+    else:
+        dropped_columns = train_params.dropped_columns
+        df = df.drop(columns=train_params.dropped_columns)
+
+    # Categorical columns that are still there should be filled with string instead of float
+    categorical_columns_remaining = list(set(categorical_columns) - set(dropped_columns))
+    df[categorical_columns_remaining] = df[categorical_columns_remaining].fillna("NA")
+
+    return df, dropped_columns
 
 
 def split_X_y(df_prep: pd.DataFrame, columns_to_use: List[str], train_params: TrainParams, one_hot_columns: List[str],
