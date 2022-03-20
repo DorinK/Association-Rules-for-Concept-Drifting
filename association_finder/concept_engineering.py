@@ -6,7 +6,7 @@ from typing import List
 import pandas as pd
 from math import ceil, floor
 
-from association_finder.concept_drifts_finder import ConceptDriftsFinder
+from association_finder.concept_drifts_finder import ConceptDriftsFinder, convert_df_to_transactions
 from association_finder.models import Transaction, ConceptDriftResult
 
 CONCEPT_DRIFT_SIZE_THRESHOLD = 50
@@ -69,11 +69,7 @@ class ConceptEngineering:
         Builds the dataframe of concepts using the ConceptsDriftsFinder
         """
 
-        # We need to convert our dataframe to a list of transactions
-        records = df.to_dict(orient='records')
-        transactions = []
-        for r in records:
-            transactions.append(Transaction({k: v for k, v in r.items()}))
+        transactions = convert_df_to_transactions(df)
 
         potential_concept_columns = list(df.columns)
         potential_concept_columns.remove(target_column)

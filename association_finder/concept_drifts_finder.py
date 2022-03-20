@@ -1,6 +1,6 @@
 import logging
 from typing import Tuple, Any, List
-
+import pandas as pd
 from efficient_apriori import apriori
 
 from association_finder.cutoff_values_finder import CutoffValuesFinder
@@ -175,3 +175,12 @@ def is_rule_valid(rule: AssociationRule, min_confidence: float, min_support: flo
     This is where we actually filter the rules. A valid rule needs to pass the confidence / support thresholds.
     """
     return rule is not None and rule.confidence >= min_confidence and rule.support >= min_support
+
+
+def convert_df_to_transactions(df: pd.DataFrame) -> List[Transaction]:
+    records = df.to_dict(orient='records')
+    transactions = []
+    for r in records:
+        transactions.append(Transaction({k: v for k, v in r.items()}))
+
+    return transactions
