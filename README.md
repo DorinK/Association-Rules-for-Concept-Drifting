@@ -44,7 +44,7 @@ values to ordinals, as well as data cleaning such as dropping N/A.
 
 ### CutoffValuesFinder
 
-This class is an inner class and shouldn't be used directly.
+This is an internal class and shouldn't be used directly.
 
 The `CutoffValuesFinder` classifies each concept as discrete or continuous, and based on that it decides for
 `ConceptDriftsFinder` which concept values to try.
@@ -92,9 +92,19 @@ Now our new `X` dataframe will have increased weights based on all of the found 
 
 To calculate the change to the value, we use the difference between the lift values.
 
+### OneVsRestClassifier
+
+This is an internal class and shouldn't be used directly.
+
+This is a simple scikit-learn `LogisticRegression` implementation with one-vs-rest (ovr) (i.e., one model for each label).
+The only difference in this implementation (instead of using `multi_class="ovr"`) is that we can inject different
+dataset changes for each label classifier (called `label_to_transformation`).
+
+This is necessary, because concept rules are per label, and we want to activate the label rules only when
+classifying the relevant label.
+
 ## Example notebooks
 We run 4 different datasets with our Concept Drifting finder using association rules. See the `notebooks/` directory.
-
 
 ### Datasets
 
