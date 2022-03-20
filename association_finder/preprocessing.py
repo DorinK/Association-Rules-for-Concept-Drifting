@@ -71,7 +71,7 @@ def preprocess_dataset(df, train_params: Optional[TrainParams] = None):
 
     # Fill with a new 'na' category:
     if train_params is None:
-        categorical_columns = list(set(categorical_columns) - set(drop_us.index))
+        categorical_columns = list(set(categorical_columns) - set(dropped_columns))
     # df[categorical_columns] = df[categorical_columns].fillna('na')
 
     # Fill Null values in ordinals with a new '-1' ordinal:
@@ -105,3 +105,17 @@ def preprocess_dataset(df, train_params: Optional[TrainParams] = None):
     return df, TrainParams(na_columns_mean, numerical_columns_cut, dropped_columns,
                            numeric_columns, very_numerical, categorical_columns,
                            too_many_categories_columns, ordinals)
+
+
+def split_X_y(df_prep: pd.DataFrame, columns_to_use: List[str], train_params: TrainParams, one_hot_columns: List[str],
+              target_column) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    X_columns = list(set(columns_to_use) - set(train_params.dropped_columns) - {target_column})
+    X = df_prep[X_columns]
+
+    for one_hot_column in list(set(one_hot_columns) - set(train_params.dropped_columns)):
+        X = pd.concat([X, pd.get_dummies(X[one_hot_column], prefix=one_hot_column)], axis=1)
+        X = X.drop(columns=[one_hot_column])
+
+    y = df_prep[target_column]
+
+    return X, y

@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import List
 
 import pandas as pd
@@ -72,6 +73,7 @@ class ConceptEngineering:
         all_concepts = []
         for concept_column in potential_concept_columns:
             try:
+                start_time = time.time()
                 if self.verbose:
                     logging.info(f"Starting concept column '{concept_column}'")
 
@@ -93,6 +95,12 @@ class ConceptEngineering:
                 else:
                     logging.warning(f"Failed concept column '{concept_column}'")
                 self.failed_concepts.append(concept_column)
+            finally:
+                end_time = time.time()
+
+            if self.verbose:
+                time_took = end_time - start_time
+                logging.info(f"Finished concept column ; time_took '{time_took}'")
 
         concepts_df = pd.DataFrame([x.to_dict() for x in all_concepts])
         self.concepts_df = concepts_df
