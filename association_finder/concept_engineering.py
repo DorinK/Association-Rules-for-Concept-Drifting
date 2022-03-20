@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import defaultdict
 from typing import List
 
 import pandas as pd
@@ -34,7 +35,8 @@ class ConceptEngineering:
         self.concepts_df = None
         self.verbose = verbose
 
-    def fit(self, X: pd.DataFrame, df: pd.DataFrame, target_column: str, one_hot_columns: List[str]):
+    def fit(self, X: pd.DataFrame, df: pd.DataFrame, target_column: str, one_hot_columns: List[str],
+            filter_concepts_by_target=None):
         """
         Finds the concept values, and the feature changes we want to make to the dataframe
         """
@@ -42,19 +44,24 @@ class ConceptEngineering:
         self.one_hot_columns = one_hot_columns
         self._build_concepts_df(df, target_column)
         X_rules = X.copy()
-        self._modify_X(X_rules, should_update_concepts_to_skip=True)
+        self._modify_X(X_rules, filter_concepts_by_target=filter_concepts_by_target,
+                       should_update_concepts_to_skip=True)
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return self
+
+    def transform(self, X: pd.DataFrame, filter_concepts_by_target=None, target_column=None) -> pd.DataFrame:
         """
         Apply the feature changes found in the fit method over the dataframe
         """
 
         X_rules = X.copy()
-        X_rules = self._modify_X(X_rules)
+        X_rules = self._modify_X(X_rules, filter_concepts_by_target=filter_concepts_by_target,
+                                 target_column=target_column)
         return X_rules
 
-    def fit_transform(self, X: pd.DataFrame, df: pd.DataFrame, target_column: str, one_hot_columns: List[str]):
-        self.fit(X, df, target_column, one_hot_columns)
+    def fit_transform(self, X: pd.DataFrame, df: pd.DataFrame, target_column: str, one_hot_columns: List[str],
+                      filter_concepts_by_target=None):
+        self.fit(X, df, target_column, one_hot_columns, filter_concepts_by_target)
         return self.transform(X)
 
     def _build_concepts_df(self, df: pd.DataFrame, target_column):
@@ -105,10 +112,16 @@ class ConceptEngineering:
         concepts_df = pd.DataFrame([x.to_dict() for x in all_concepts])
         self.concepts_df = concepts_df
 
-    def _modify_X(self, X, should_update_concepts_to_skip=False):
-        rows_to_update = []
+    def _modify_X(self, X, should_update_concepts_to_skip=False, filter_concepts_by_target=None, target_column=None):
+        concepts_df = self.concepts_df
 
-        for idx, concept_row in self.concepts_df.iterrows():
+        # Support applying only specific concepts (for one-vs-all use case)
+        if filter_concepts_by_target is not None:
+            concepts_df = concepts_df[concepts_df['right_hand_side'] == {target_column: filter_concepts_by_target}]
+
+        # Run over all concepts and find the relevant rows to update
+        rows_to_update = defaultdict(lambda: defaultdict(list))
+        for idx, concept_row in concepts_df.iterrows():
             if idx in self.concepts_to_skip:
                 continue
 
@@ -127,31 +140,32 @@ class ConceptEngineering:
                 else:
                     lhs_columns.append(f"{column_name}_{column_value}")
 
-            rows_to_update.append((filtered_X.index, lhs_columns, concept_row))
+            for row_index in filtered_X.index:
+                for lhs_column in lhs_columns:
+                    rows_to_update[row_index][lhs_column].append(concept_row)
 
         # Convert categorical columns to float (otherwise we can't multiply their value)
         X = X.astype('float')
 
-        for indices, columns, concept_row in rows_to_update:
-            try:
-                X.loc[indices, columns] = X.loc[indices, columns] * self._get_weight(concept_row)
-            except:
-                # This will also write the stack trace
-                if self.verbose:
-                    logging.exception(f"Failed concept row '{concept_row}'")
-                else:
-                    logging.warning(f"Failed concept row '{concept_row}'")
-
+        for row_index, columns in rows_to_update.items():
+            for column_name, concepts_rows in columns.items():
+                try:
+                    X.loc[row_index, column_name] = X.loc[row_index, column_name] * self._get_weight(concepts_rows)
+                except:
+                    # This will also write the stack trace
+                    if self.verbose:
+                        logging.exception(f"Failed concept row '{row_index}' ; {column_name}")
+                    else:
+                        logging.warning(f"Failed concept row '{row_index}' ; {column_name}")
 
         return X
 
-    def _get_weight(self, concept_row) -> float:
+    def _get_weight(self, concepts_rows) -> float:
         """
         Decides how much to increase confident rules
         """
 
-        return 1.2
-        # return (abs(concept_row['lift_before'] - concept_row['lift_after']))
+        return max([abs(concept_row['lift_before'] - concept_row['lift_after']) for concept_row in concepts_rows])
 
     def _from_lhs_to_queries(self, lhs: dict) -> List[str]:
         """
@@ -216,5 +230,3 @@ class ConceptEngineering:
 
         concept_query = self._create_concept_query(X, concept_row)
         return X.query(concept_query)
-
-

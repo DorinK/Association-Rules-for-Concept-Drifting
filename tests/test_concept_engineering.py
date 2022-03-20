@@ -38,4 +38,5 @@ class TestConceptEngineering:
             new_X = concept_engineering.fit_transform(X, df, target_column, [])
 
         # We expect the new value to be 12 (twice multiplied by 2)
-        assert new_X.iloc[0]['Humidity9am'] == 3.6
+        assert new_X.iloc[0]['Humidity9am'] == 6.0
+
