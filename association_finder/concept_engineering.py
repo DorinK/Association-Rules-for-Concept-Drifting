@@ -109,6 +109,29 @@ class ConceptEngineering:
         self.concepts_df = concepts_df
 
     def _modify_X(self, X, should_update_concepts_to_skip=False, filter_concepts_by_target=None, target_column=None):
+        rows_to_update = self._map_concept_rows_to_df_rows(X, should_update_concepts_to_skip, filter_concepts_by_target, target_column)
+
+        # Convert categorical columns to float (otherwise we can't multiply their value)
+        X = X.astype('float')
+
+        for row_index, columns in rows_to_update.items():
+            for column_name, concepts_rows in columns.items():
+                try:
+                    X.loc[row_index, column_name] = X.loc[row_index, column_name] * self._get_weight(concepts_rows)
+                except:
+                    # This will also write the stack trace
+                    if self.verbose:
+                        logging.exception(f"Failed concept row '{row_index}' ; {column_name}")
+                    else:
+                        logging.warning(f"Failed concept row '{row_index}' ; {column_name}")
+
+        return X
+
+    def _map_concept_rows_to_df_rows(self, X, should_update_concepts_to_skip=False, filter_concepts_by_target=None, target_column=None):
+        """
+        Creates a map between the X dataframe to the concept rows.
+        """
+
         concepts_df = self.concepts_df
 
         # Support applying only specific concepts (for one-vs-all use case)
@@ -116,7 +139,7 @@ class ConceptEngineering:
             concepts_df = concepts_df[concepts_df['right_hand_side'] == {target_column: filter_concepts_by_target}]
 
         # Run over all concepts and find the relevant rows to update
-        rows_to_update = defaultdict(lambda: defaultdict(list))
+        df_rows_to_concept_rows = defaultdict(lambda: defaultdict(list))
         for idx, concept_row in concepts_df.iterrows():
             if idx in self.concepts_to_skip:
                 continue
@@ -138,23 +161,9 @@ class ConceptEngineering:
 
             for row_index in filtered_X.index:
                 for lhs_column in lhs_columns:
-                    rows_to_update[row_index][lhs_column].append(concept_row)
+                    df_rows_to_concept_rows[row_index][lhs_column].append(concept_row)
 
-        # Convert categorical columns to float (otherwise we can't multiply their value)
-        X = X.astype('float')
-
-        for row_index, columns in rows_to_update.items():
-            for column_name, concepts_rows in columns.items():
-                try:
-                    X.loc[row_index, column_name] = X.loc[row_index, column_name] * self._get_weight(concepts_rows)
-                except:
-                    # This will also write the stack trace
-                    if self.verbose:
-                        logging.exception(f"Failed concept row '{row_index}' ; {column_name}")
-                    else:
-                        logging.warning(f"Failed concept row '{row_index}' ; {column_name}")
-
-        return X
+        return df_rows_to_concept_rows
 
     def _get_weight(self, concepts_rows) -> float:
         """
