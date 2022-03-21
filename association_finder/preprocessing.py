@@ -83,7 +83,8 @@ def preprocess_dataset(df, train_params: Optional[TrainParams] = None):
                            too_many_categories_columns, ordinals)
 
 
-def _fill_numerical_na_with_column_mean(df: pd.DataFrame, very_numerical: List[str], train_params: TrainParams) -> Tuple[
+def _fill_numerical_na_with_column_mean(df: pd.DataFrame, very_numerical: List[str], train_params: TrainParams) -> \
+Tuple[
     pd.DataFrame, dict]:
     """
     Filling Null Values with the column's mean
@@ -131,10 +132,10 @@ def _handle_categorical_na(df, categorical_columns: List[str], train_params: Tra
 
 def split_X_y(df_prep: pd.DataFrame, columns_to_use: List[str], train_params: TrainParams, one_hot_columns: List[str],
               target_column) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    X_columns = list(set(columns_to_use) - set(train_params.dropped_columns) - {target_column})
+    X_columns = sorted(list(set(columns_to_use) - set(train_params.dropped_columns) - {target_column}))
     X = df_prep[X_columns]
 
-    for one_hot_column in list(set(one_hot_columns) - set(train_params.dropped_columns)):
+    for one_hot_column in sorted(list(set(one_hot_columns) - set(train_params.dropped_columns))):
         X = pd.concat([X, pd.get_dummies(X[one_hot_column], prefix=one_hot_column)], axis=1)
         X = X.drop(columns=[one_hot_column])
 
