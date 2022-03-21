@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-
+import numpy as np
 
 class OneVsRestClassifier:
     """
@@ -35,6 +35,7 @@ class OneVsRestClassifier:
                 if label in self.label_to_transformation:
                     transformed_X = self.label_to_transformation[label](X)
 
+                np.random.seed(0)
                 clf = LogisticRegression(random_state=0, max_iter=100000).fit(transformed_X, y_ova)
                 self.classifiers[label] = clf
         else:
