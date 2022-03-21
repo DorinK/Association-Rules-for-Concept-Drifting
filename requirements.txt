@@ -1,5 +1,2 @@
-efficient_apriori
 dataclasses_json
-pandas
-scikit-learn
 mock
