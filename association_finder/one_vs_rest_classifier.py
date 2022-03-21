@@ -2,6 +2,7 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 import numpy as np
 
+
 class OneVsRestClassifier:
     """
     This is a simple scikit-learn LogisticRegression implementation with one-vs-rest (ovr) (i.e., one model for each
