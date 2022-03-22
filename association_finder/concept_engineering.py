@@ -86,8 +86,7 @@ class ConceptEngineering:
                                                                                                target_column,
                                                                                                min_confidence=self.min_confidence,
                                                                                                min_support=self.min_support,
-                                                                                               diff_threshold=self.diff_threshold,
-                                                                                               verbose=self.verbose)
+                                                                                               diff_threshold=self.diff_threshold)
 
                 # Convert to dataframe
                 all_concepts.extend(concepts)

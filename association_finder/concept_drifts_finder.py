@@ -13,9 +13,8 @@ class ConceptDriftsFinder:
     """
 
     def find_concept_drifts(self, transactions: List[Transaction], concept_column: str, target_column: str,
-                            min_confidence: float = 1.0, min_support: float = 0.5,
-                            diff_threshold: float = 0.5,
-                            verbose: bool = False) -> List[ConceptDriftResult]:
+                            min_confidence: float = 0.4, min_support: float = 0.4,
+                            diff_threshold: float = 0.1) -> List[ConceptDriftResult]:
         """
         Given a dataset of transactions:
         1. find different <concept_column> cutoffs
@@ -29,8 +28,7 @@ class ConceptDriftsFinder:
         # Choose cutoff values
         cutoff_values, cutoff_values_type = CutoffValuesFinder.choose_cutoff_values(transactions, concept_column)
 
-        if verbose:
-            logging.info(f"Found cutoff_values_type: {cutoff_values_type} ; len(cutoff_values) {len(cutoff_values)}")
+        logging.debug(f"Found concept_column: {concept_column} ; cutoff_values_type: {cutoff_values_type} ; len(cutoff_values) {len(cutoff_values)}")
 
         # Run over cutoff values
         for concept_cutoff in cutoff_values:
@@ -42,9 +40,13 @@ class ConceptDriftsFinder:
             if not any(part_one) or not any(part_two):
                 continue
 
+            logging.debug(f"Start concept_cutoff: {concept_cutoff}")
+
             # Calc rules for each split
             rules_one = self._calc_rules(part_one, target_column)
             rules_two = self._calc_rules(part_two, target_column)
+
+            logging.debug(f"Start comparing rules: {concept_cutoff}")
 
             # Compare rules and find concept drifts
             concept_drift_results.extend(self._compare_rules(rules_one, rules_two, min_confidence, min_support,
@@ -80,9 +82,13 @@ class ConceptDriftsFinder:
         # Prepare the data for the apriori algorithm
         apriori_input: List[List[Tuple[str, str]]] = self._convert_transactions_to_apriori_input(transactions)
 
+        logging.debug("Starting apriori")
+
         # Note: the reason we use `min_confidence=0.1` and `min_support=0.1` is that we need all rules for comparison.
         # The confidence / support filters will run afterwards
         itemsets, rules = apriori(apriori_input, min_confidence=0.1, min_support=0.1)
+
+        logging.debug("Finished apriori")
 
         # Convert rules to our own objects (used to easily filter for target_column)
         rules_parsed = [AssociationRule.create(rule) for rule in rules]

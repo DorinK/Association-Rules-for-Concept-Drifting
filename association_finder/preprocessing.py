@@ -122,7 +122,6 @@ def _handle_categorical_na(df, categorical_columns: List[str], train_params: Tra
     return df, dropped_columns
 
 
-
 def _bin_numerical_data(df, very_numerical: List[str], train_params: TrainParams) -> Tuple[pd.DataFrame, dict]:
     """
     Bins numerical data into bins of 5 so it can be used with association rules
