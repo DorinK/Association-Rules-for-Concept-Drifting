@@ -185,4 +185,8 @@ def _handle_missing_columns(X: pd.DataFrame, train_columns: List[str]) -> pd.Dat
         for column_missing in columns_missing:
             X[column_missing] = 0
 
+        # remove columns created in prediction but were not in train (e.g., NA columns)
+        columns_added = [column for column in X.columns if column not in train_columns]
+        X = X.drop(columns=columns_added)
+
     return X
