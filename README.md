@@ -1,6 +1,17 @@
 # Association-Rules-for-Concept-Drifting
 Final project in 'Tabular Data Science' course by Dr. Amit Somech at Bar-Ilan University.
 
+## Example notebooks
+There are two notebooks in the `notebooks/` directory.
+
+### Notebook #1 -  EDA Example
+The notebook `eda_example.ipynb` is an example of how to use our ConceptDriftsFinder tool as part of the EDA process.
+
+### Notebook #2 - Automatic feature engineering
+The notebook `automatic_feature_engineeirng.ipynb` uses a simple heuristic to try and automatically utilize our
+`ConceptsDriftFinder` tool for feature engineering.
+We test it on 4 different datasets, described below and in the accompanying pdf.
+
 ## ConceptDriftsFinder
 
 In the Exploratory Data Analysis process (EDA), `ConceptsDriftsFinder` can be used to automatically find concept drifts.
@@ -10,7 +21,7 @@ The `find_concept_drifts` function receives  a list of transactions and returns 
 Let's say we suspect the column `OverallQual` as a concept drift, we can run:
 
 ```python
-ConceptsDriftFinder().find_concept_drifts(transactions, concept_column="OverallQual", target_column="SalePrice")
+ConceptDriftsFinder().find_concept_drifts(transactions, concept_column="OverallQual", target_column="SalePrice")
 ```
 
 Here is a sample of the output in a table format:
@@ -31,7 +42,7 @@ This is useful to better understand our dataset.
 See the following section about preprocessing your data before you can use `ConceptDriftsFinder`.
 
 The amount of drifts found can be controlled with the following parameters: `min_confidence: float`,
-`min_support: float`, `diff_threshold: float`.
+`min_support: float`, `diff_threshold: float` (between lift values).
 
 A `pandas.DataFrame` object can be converted to transactions using the helper function `convert_df_to_transactions`.
 
@@ -39,7 +50,7 @@ A `pandas.DataFrame` object can be converted to transactions using the helper fu
 
 When working with association rules, we can't use numerical values, only categorical or ordinal.
 `preprocessing.py` contains code to convert numerical
-values to ordinals, as well as data cleaning such as dropping N/A.
+values to ordinals, as well as data cleaning such as filling N/A with average values or dropping N/A completely.
 
 
 ### CutoffValuesFinder
@@ -51,7 +62,7 @@ The `CutoffValuesFinder` classifies each concept as discrete or continuous, and 
 
 ## ConceptEngineering
 To easily start using this library for feature engineering for machine learning models, we created `ConceptEngineering`.
-The idea is to automatically take the found concept drifts into account by changing the values of the dataset.
+The idea is to automatically take the found concept drifts into account by changing the weights of the features in the dataset.
 
 ### Example usage
 Let's look at the following row from our dataset (shortened for readability):
@@ -103,10 +114,7 @@ dataset changes for each label classifier (called `label_to_transformation`).
 This is necessary, because concept rules are per label, and we want to activate the label rules only when
 classifying the relevant label.
 
-## Example notebooks
-We run 4 different datasets with our Concept Drifting finder using association rules. See the `notebooks/` directory.
-
-### Datasets
+## Datasets
 
 To test our library, we used 4 datasets:
 * [Housing prices](https://github.com/amitsomech/TDS-COURSE/tree/master/datasets/houseprices).
